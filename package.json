@@ -1,33 +1,21 @@
 {
-  "name": "@pipeworx/mcp-pacer",
-  "version": "0.2.0",
-  "description": "PACER Case Locator (PCL) MCP — live US federal court case & party search on the user's OWN PACER account (pacer.uscourts.gov). BYO credentials.",
+  "name": "pacer-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PACER Case Locator (PCL) MCP server, hosted as an Apify Standby Actor — live US federal court case & party search on your own PACER account.",
   "type": "module",
-  "main": "lib/index.js",
-  "exports": {
-    ".": "./lib/index.js",
-    "./tools.json": "./tools.json",
-    "./package.json": "./package.json"
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test"
   },
-  "bin": {
-    "mcp-pacer": "bin/cli.js"
-  },
-  "files": ["bin/", "lib/", "tools.json", "server.json"],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
-  "keywords": ["mcp", "mcp-server", "model-context-protocol", "pipeworx", "pacer"],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pipeworx-io/mcp-pacer.git"
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "apify": "^3.4.2",
+    "zod": "^3.25.76"
   },
-  "mcpName": "io.github.pipeworx-io/pacer",
-  "pipeworx": {
-    "mode": "gateway",
-    "slug": "pacer",
-    "gatewaySlug": "pacer",
-    "sourceHash": "v1-ade5533cbbfa2c3d8eb6dd504416d897ddde28519e81f44b77dbf7fe0ba5f994",
-    "sourceCommit": "6bae4cfa7b6a73bbe014dc8820a19c80c842b21e"
-  }
+  "license": "MIT"
 }

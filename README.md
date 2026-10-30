@@ -1,114 +1,89 @@
-# mcp-pacer
+# PACER MCP Server
 
-PACER Case Locator (PCL) MCP — live US federal court case & party search on the user's OWN PACER account (pacer.uscourts.gov). BYO credentials.
+An [MCP](https://modelcontextprotocol.io) server for the **PACER Case Locator (PCL)**: live search of US federal court cases and parties across every district, bankruptcy, and appellate court, using **your own PACER account**. It runs on [Apify](https://apify.com) as a Standby Actor, so there's nothing to install: point your MCP client at the Actor's URL.
 
-Part of [Pipeworx](https://pipeworx.io) — an MCP gateway connecting AI agents to 1856+ live data sources. This is an independent, unofficial integration — not affiliated with, endorsed by, or published by the upstream provider.
+> PACER bills your account for every search ($0.10 per page of results, capped per search). This is an independent, unofficial integration, not affiliated with the Administrative Office of the US Courts.
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `pacer_case_search` | Find US federal court cases by party name, case title, or case number — live search of the PACER Case Locator (PCL) across every federal district, bankruptcy, and appellate court. Returns case number, title, court, filing date, nature of suit, and case type. Requires your own PACER credentials (NextGen); PACER charges your account per search ($0.10/page, capped). Example: pacer_case_search({ case_title: "Lytx v. Sanderson", _apiKey: "myuser:mypass" }) or pacer_case_search({ party_name: "Nicholas Henderson", court_id: "ilndc", _apiKey: "myuser:mypass" }) |
-| `pacer_party_search` | Find parties across US federal court cases by name — live PACER Case Locator (PCL) party search across all federal courts. Returns each matching party (name, role) with the associated case number, court, and case title. Requires your own PACER credentials (NextGen); PACER charges your account per search ($0.10/page, capped). Example: pacer_party_search({ party_name: "Nicholas Henderson", _apiKey: "myuser:mypass" }) |
+| Tool | What it does |
+|------|--------------|
+| `pacer_case_search` | Find cases by case title, case number, or party name. Filters: court, filing dates, case type, nature of suit. A party name is searched through the PCL party index and the matching cases are returned (de-duplicated). |
+| `pacer_party_search` | Find parties by name, with their role and the associated case (number, court, title). Filters: court, role (`dft`, `pla`, ...), exact match. |
 
-## Quick Start
+Every result includes PCL's paging info (`page`, `total_pages`, `total_results`) and the PACER billing `receipt` for that search.
 
-Add to your MCP client (Claude Desktop, Cursor, Windsurf, etc.):
+Party names can be given as `party_name` ("Nicholas Henderson", "Henderson, Nicholas", "Lytx Inc"), which is split into last/first name automatically (organisations stay whole), or as explicit `last_name` / `first_name`.
 
-```json
-{
-  "mcpServers": {
-    "pacer": {
-      "url": "https://gateway.pipeworx.io/pacer/mcp"
-    }
-  }
-}
-```
+## Connect
 
-### What this endpoint actually serves
-
-`tools/list` at `https://gateway.pipeworx.io/pacer/mcp` returns the tools in the table
-above **plus the shared Pipeworx meta-tools** — `ask_pipeworx`,
-`discover_tools`, `search_within`, `remember`/`recall` and the rest of the
-gateway-wide set. So the tool count you see is larger than this table: a
-single-pack endpoint currently lists roughly 30 shared tools alongside the
-pack's own. The connection's `initialize` response states its exact scope, and
-is the authoritative answer for a given day.
-
-This is deliberate, not multiplexing by accident. The meta-tools are what let a
-scoped connection answer a question this pack does not cover — via
-`ask_pipeworx`, which routes across the whole catalog — without you adding a
-second MCP server. There is currently no way to mount a pack endpoint without
-them; if the extra schemas cost you more context than the routing is worth,
-connect to the full gateway once rather than to several pack endpoints.
-
-Or connect to the full Pipeworx gateway to get every pack's tools listed
-directly, instead of just this one's:
-
-```json
-{
-  "mcpServers": {
-    "pipeworx": {
-      "url": "https://gateway.pipeworx.io/mcp"
-    }
-  }
-}
-```
-
-Both URLs reach the same gateway and the same 1856+ data sources. The
-only difference is which pack's tools are listed **directly**; `ask_pipeworx`
-reaches all of them from either one.
-
-## No MCP client? Call it over HTTP
-
-This pack takes your own API key (`_apiKey`) — we don't front one for it, so there's no curl here that would run without it. Inspect any tool: `GET https://gateway.pipeworx.io/v1/tools/pacer_case_search`. Find one: `POST https://gateway.pipeworx.io/v1/tools/search_packs` with `{"query":"..."}`.
-
-## Run it from npm
-
-`@pipeworx/mcp-pacer` is a local stdio bridge to the Pipeworx gateway: your MCP client
-starts it with `npx`, and it forwards every call to the same
-`https://gateway.pipeworx.io/pacer/mcp` endpoint shown above. It needs network access;
-there is no offline mode.
+The MCP endpoint is the Actor's Standby URL plus `/mcp` (shown in the Actor's **Server** tab in Apify Console), using the Streamable HTTP transport. Authenticate with your Apify API token:
 
 ```json
 {
   "mcpServers": {
     "pacer": {
-      "command": "npx",
-      "args": ["-y", "@pipeworx/mcp-pacer"]
+      "url": "https://<username>--pacer-mcp.apify.actor/mcp",
+      "headers": {
+        "Authorization": "Bearer <APIFY_TOKEN>"
+      }
     }
   }
 }
 ```
 
-Without a key it calls anonymously, capped at 50 calls a day. A free account
-raises that to 200 a day: get a key at https://pipeworx.io/signup and add
-`"env": { "PIPEWORX_API_KEY": "<your key>" }` to the server entry.
-The key is sent as a Bearer token, the same way a hosted connection sends it,
-so calls are metered and billed exactly as they are there.
+### PACER credentials
 
-It lists **only** this pack's tools by default. Set `PIPEWORX_META_TOOLS=1` to
-also list `ask_pipeworx` and the other gateway-wide tools.
+Give the server your PACER login in **one** of two ways. Credentials are never tool arguments, so they never pass through the model.
 
-Behind an HTTPS proxy: Node's built-in `fetch` does not read `HTTPS_PROXY` by
-default. Newer Node releases honour it when `NODE_USE_ENV_PROXY=1` is set; check
-your Node version's documentation.
+1. **Headers on the MCP connection** (best for a shared deployment, since every client brings its own account):
 
-## Using with ask_pipeworx
+   ```json
+   "headers": {
+     "Authorization": "Bearer <APIFY_TOKEN>",
+     "X-Pacer-Username": "<pacer login>",
+     "X-Pacer-Password": "<pacer password>"
+   }
+   ```
 
-Instead of calling tools directly, you can ask questions in plain English —
-this works on the pack endpoint above as well as on the full gateway:
+   Optional: `X-Pacer-Client-Code`, `X-Pacer-Totp-Secret` (accounts with MFA), `X-Pacer-Redact-Flag: 1` (filer accounts).
 
+2. **Actor input**, stored encrypted as secret fields: `pacerUsername`, `pacerPassword`, and optionally `pacerClientCode`, `pacerTotpSecret`, `redactFlag`, `environment`. Save the Actor as a **task** with this input, turn on **Validate and pass Actor input** in the task's Standby settings, and connect to the task's URL instead of the Actor's.
+
+Headers win over the Actor input when both are present.
+
+**MFA:** if your PACER account has multi-factor authentication, provide the base32 secret from your authenticator enrollment as `pacerTotpSecret`. The server generates the one-time code at each login.
+
+**Testing:** set `environment` to `qa` to use PACER's QA environment (separate QA account, no charges).
+
+## How it works
+
+- Logs in to the PACER authentication service (`pacer.login.uscourts.gov/services/cso-auth`) to get a NextGen token, caches it per account for the life of the Standby run, and logs in again once if PCL answers 401.
+- Calls the PCL API (`pcl.uscourts.gov/pcl-public-api/rest/cases/find` and `/parties/find`).
+- Ends every PACER session when the run shuts down.
+- The MCP server is stateless (no MCP sessions), so Apify can scale Standby runs freely.
+
+## Development
+
+```bash
+npm install
+npm test
 ```
-ask_pipeworx({ question: "your question about Pacer data" })
+
+Run the server locally in Standby mode, on `http://localhost:4321/mcp`:
+
+```bash
+APIFY_META_ORIGIN=STANDBY ACTOR_WEB_SERVER_PORT=4321 npm start
 ```
 
-The gateway picks the right tool and fills the arguments automatically.
+Deploy with the [Apify CLI](https://docs.apify.com/cli/):
 
-## More
+```bash
+apify login
+apify push
+```
 
-- [Docs and guides](https://pipeworx.io/docs)
-- [pipeworx.io](https://pipeworx.io)
+Standby mode and the `/mcp` path are set in `.actor/actor.json`.
 
 ## License
 

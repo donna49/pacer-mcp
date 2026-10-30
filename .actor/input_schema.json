@@ -1,0 +1,49 @@
+{
+  "title": "PACER MCP Server",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "pacerUsername": {
+      "title": "PACER username",
+      "type": "string",
+      "description": "Your NextGen PACER login ID. Optional if MCP clients send the X-Pacer-Username header instead.",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "pacerPassword": {
+      "title": "PACER password",
+      "type": "string",
+      "description": "Your PACER password. Optional if MCP clients send the X-Pacer-Password header instead.",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "pacerClientCode": {
+      "title": "PACER client code",
+      "type": "string",
+      "description": "Client code, only if your PACER account requires one.",
+      "editor": "textfield"
+    },
+    "pacerTotpSecret": {
+      "title": "PACER MFA (TOTP) secret",
+      "type": "string",
+      "description": "Base32 secret of your authenticator app enrollment, only if multi-factor authentication is enabled on the account. Used to generate a one-time code at each login.",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "redactFlag": {
+      "title": "Filer redaction attestation",
+      "type": "boolean",
+      "description": "Only for filer accounts: sends PACER's redactFlag, attesting that you comply with the redaction rules. Leave off for search-only accounts.",
+      "default": false
+    },
+    "environment": {
+      "title": "PACER environment",
+      "type": "string",
+      "description": "Use \"qa\" to test against PACER's QA environment (needs a separate QA account; searches there are not billed).",
+      "editor": "select",
+      "enum": ["production", "qa"],
+      "enumTitles": ["Production", "QA (testing)"],
+      "default": "production"
+    }
+  }
+}

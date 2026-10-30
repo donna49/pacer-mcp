@@ -1,0 +1,14 @@
+{
+  "actorSpecification": 1,
+  "name": "pacer-mcp",
+  "title": "PACER MCP Server",
+  "description": "MCP server for the PACER Case Locator: live search of US federal court cases and parties on your own PACER account.",
+  "version": "1.0",
+  "buildTag": "latest",
+  "usesStandbyMode": true,
+  "webServerMcpPath": "/mcp",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 1024
+}
